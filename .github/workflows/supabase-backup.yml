@@ -1,23 +1,17 @@
-name: Backup Supabase
+ name: Backup Supabase
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "30 3 * * *"
-      timezone: "America/Sao_Paulo"
- 
+
 jobs:
   backup:
     runs-on: ubuntu-latest
 
     steps:
       - name: Baixar código
-        uses: actions/checkout@v4
-
-      - name: Instalar Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+        uses: actions/checkout@v5
 
       - name: Criar pasta de backup
         run: mkdir -p backup
@@ -26,17 +20,16 @@ jobs:
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          supabase db dump --db-url "$DB_URL" -f backup/roles.sql --role-only
-          supabase db dump --db-url "$DB_URL" -f backup/schema.sql
-          supabase db dump --db-url "$DB_URL" -f backup/data.sql --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          npx supabase db dump --db-url "$DB_URL" -f backup/roles.sql --role-only
+          npx supabase db dump --db-url "$DB_URL" -f backup/schema.sql
+          npx supabase db dump --db-url "$DB_URL" -f backup/data.sql --data-only --use-copy
 
-      - name: Compactar
-        run: |
-          tar -czf "supabase-backup-$(date +%F-%H%M).tar.gz" backup
+      - name: Compactar backup
+        run: tar -czf backup-supabase.tar.gz backup
 
-      - name: Enviar artefato
-        uses: actions/upload-artifact@v4
+      - name: Salvar artefato
+        uses: actions/upload-artifact@v6
         with:
-          name: supabase-backup-${{ github.run_number }}
-          path: supabase-backup-*.tar.gz
+          name: backup-supabase
+          path: backup-supabase.tar.gz
           retention-days: 7
