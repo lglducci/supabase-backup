@@ -13,6 +13,11 @@ jobs:
       - name: Baixar código
         uses: actions/checkout@v5
 
+      - name: Instalar Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
       - name: Criar pasta de backup
         run: mkdir -p backup
 
