@@ -61,4 +61,4 @@ jobs:
         with:
           name: backup-desenv
           path: out/*.tar.gz
-          retention-days: 7
+          retention-days: 3
