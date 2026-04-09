@@ -37,4 +37,4 @@ jobs:
         with:
           name: backup-supabase
           path: backup-supabase.tar.gz
-          retention-days: 7
+          retention-days: 3
