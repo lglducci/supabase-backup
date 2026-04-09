@@ -1,0 +1,64 @@
+name: Backup Supabase Desenv Save
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 3 * * *"
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Criar pasta de trabalho
+        run: mkdir -p backup out
+
+      - name: Gerar dumps
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL_DESENV }}
+        run: |
+          supabase db dump --db-url "$DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$DB_URL" -f backup/data.sql --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
+
+      - name: Compactar backup
+        run: |
+          ARQ="supabase-backup-$(date +%F-%H%M).tar.gz"
+          tar -czf "out/$ARQ" backup
+          echo "ARQ=$ARQ" >> $GITHUB_ENV
+
+      - name: Checkout do repositório de backups
+        uses: actions/checkout@v4
+        with:
+          repository: lglducci/supabase-archives
+          token: ${{ secrets.BACKUP_REPO_PAT }}
+          path: repo-backups
+
+      - name: Salvar arquivo no repositório privado
+        run: |
+          mkdir -p repo-backups/desenv
+          cp "out/$ARQ" "repo-backups/desenv/$ARQ"
+          cd repo-backups
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add desenv/"$ARQ"
+          git commit -m "Backup desenv $ARQ" || echo "Nada para commitar"
+          git push
+
+      - name: Salvar artefato também
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-desenv
+          path: out/*.tar.gz
+          retention-days: 7
